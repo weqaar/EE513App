@@ -20,9 +20,9 @@ import queue
 
 class MainScreen(GridLayout):
 
-	global _data_object  
-	global global_terminal
-	global _data_queue
+	#global _data_object  
+	#global global_terminal
+	#global _data_queue
 
 	_data_object = { "server": None,
 					"port": None,

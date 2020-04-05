@@ -6,6 +6,7 @@ build:
 
 clean:
 	$(CC) appclean
+	find . -name '*.apk' -exec rm -fr {} +
 
 update:
 	git pull
