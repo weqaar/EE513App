@@ -11,23 +11,27 @@ from kivy.uix.popup import Popup
 from kivy.uix.spinner import Spinner
 from kivy import platform
 import paho.mqtt.client as mqtt
-from plyer import vibrator
-from plyer import accelerometer
+from plyer import vibrator, accelerometer
 import threading
 import time
 import queue
+import hashlib
 
+#setup graphics
+from kivy.config import Config
+Config.set('graphics','resizable',0)
+ 
+#Graphics fix
+from kivy.core.window import Window;
+Window.clearcolor = (0,0,0,1.)
 
 class MainScreen(GridLayout):
 
-	#global _data_object  
-	#global global_terminal
-	#global _data_queue
-
 	_data_object = { "server": None,
-					"port": None,
-					"protocol": None,
-					"platform": str(platform)
+					 "port": None,
+					 "protocol": None,
+					 "topic_url": None,
+					 "platform": str(platform)
 			   }
 		
 	def __init__(self, **kwargs):
@@ -40,8 +44,8 @@ class MainScreen(GridLayout):
 
 		#Layouts
 		self._main_layout = BoxLayout(orientation='vertical', padding=0, size_hint=(1, 1))
-		_terminal_layout = BoxLayout(orientation='vertical', padding=0, size_hint=(1, 0.2))
-		_partition_layout = GridLayout(cols=2, rows=4, padding=0, size_hint=(1, 1), row_force_default=True, \
+		_terminal_layout = BoxLayout(orientation='vertical', padding=0, size_hint=(1, 0.7))
+		_partition_layout = GridLayout(cols=2, rows=5, padding=0, size_hint=(1, 1), row_force_default=True, \
 									   rows_minimum={0: 150, 1: 150, 2: 150, 3: 150}, row_default_height=150, spacing=25)
   
 		_action_previous = ActionPrevious(title='EE513 LABS', with_previous=False, app_icon='icons/chip.png', padding=0)
@@ -79,6 +83,11 @@ class MainScreen(GridLayout):
 		spinner.bind(text=self.callback_spinner_text)
 		_partition_layout.add_widget(spinner)
 
+		_partition_layout.add_widget(Label(text='Topic/URL', size_hint_x=None, width=400))
+		self.topic_url = TextInput(text='/ie/dcu/ee513', multiline=False)
+		self.topic_url.bind(text=self.callback_topic_url_text)
+		_partition_layout.add_widget(self.topic_url)
+  
 		_partition_layout.add_widget(Label(text='Connect', size_hint_x=None, width=400))
 		switch = Switch()
 		switch.bind(active=self.callback_switch)
@@ -97,6 +106,10 @@ class MainScreen(GridLayout):
 		if (value is True):
 			terminal_thread = threading.Thread(target=self.publish_terminal, args=(self.global_terminal, self._data_queue, ))
 			terminal_thread.start()
+			try:
+				load_jnius_nih()
+			except Exception as _exp:
+				self.global_terminal.insert_text("Exception: " + str(_exp) + "\n")
 		elif (value is False):
 			self._data_queue.put("exit")
    
@@ -139,21 +152,57 @@ class MainScreen(GridLayout):
 	def callback_spinner_text(self, spinner, text):
 		self._data_object["protocol"] = text
 
+	def callback_topic_url_text(self, instance, value):
+		self._data_object["topic_url"] = value
+
 	def publish_terminal(self, terminal, _data_queue):
+		terminal.insert_text("\n")
+		if (platform == 'android') or (platform == 'ios'):
+			vibrator.vibrate(1)
+			try:
+				accelerometer.enable()
+			except Exception as _exp:
+				terminal.insert_text("Exception: " + str(_exp) + "\n")
+		previous_payload_hash = None	
 		while True:
 			if _data_queue.empty() is False:
 				qdata = _data_queue.get()
 				if qdata == "exit":
 					break
 			if (platform == 'android') or (platform == 'ios'):
-				vibrator.vibrate(2)
-				accelerometer.enable()
-				terminal.insert_text("sensor: " + str(accelerometer.acceleration) + "\n")
-				time.sleep(0.5)
+				if None in accelerometer.acceleration:
+					pass
+				else:
+					payload_hash = hashlib.md5(str(accelerometer.acceleration).encode('utf-8')).hexdigest()
+					if (previous_payload_hash is not None):
+						if (previous_payload_hash == payload_hash):
+							pass
+						else:
+							previous_payload_hash = payload_hash
+							terminal.insert_text("AXL (x, y, z): " + str(accelerometer.acceleration) + "\n")
+							time.sleep(0.1)
+					else:
+						terminal.insert_text("AXL (x, y, z): " + str(accelerometer.acceleration) + "\n")
+						time.sleep(0.1)
 			else:
 				terminal.insert_text("time: " + str(time.strftime("%c", time.gmtime())) + "\n")
 				time.sleep(2)
-  
+
+#Bug fix, src: https://github.com/jeremyklelifa/Jukebar/commit/0607c7cb4dcef2125ab1b2b70227a7999f7caabe
+#Another potential solution: https://github.com/VoiceThread/pyjnius
+def load_jnius_nih():
+	"""
+	Creates org.jnius.NativeInvocationHandler once in the main thread
+	to wordaround the error:
+	JavaException: Class not found 'org/jnius/NativeInvocationHandler'
+	see:
+	  - https://github.com/kivy/pyjnius/issues/137
+	  - https://github.com/kivy/pyjnius/issues/223
+	  - http://stackoverflow.com/a/27943091/185510
+	"""
+	from jnius import autoclass
+	autoclass('org.jnius.NativeInvocationHandler')
+	
 class AXLApp(App):
 
 	def build(self):
