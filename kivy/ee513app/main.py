@@ -65,7 +65,7 @@ class MainScreen(GridLayout):
 		_action_previous = ActionPrevious(title='EE513 LABS', with_previous=False, app_icon='icons/chip.png', padding=0)
 		_action_overflow = ActionOverflow()
 		_action_view = ActionView(overflow_group=_action_overflow, use_separator=True)
-		_action_button = ActionButton(text='config')
+		_action_button = ActionButton(text='debug')
 		_action_overflow.add_widget(_action_button)
 		_action_button_about = ActionButton(text='About')
 		_action_button_about.bind(on_release=self._popup_about)
@@ -104,7 +104,7 @@ class MainScreen(GridLayout):
 		_partition_layout.add_widget(protocol_spinner)
 
 		_partition_layout.add_widget(Label(text='Topic/URL', size_hint_x=None, width=400))
-		self.topic_url = TextInput(text='/ie/dcu/ee513', multiline=False)
+		self.topic_url = TextInput(text='ie/dcu/ee513', multiline=False)
 		self.topic_url.bind(text=self.callback_topic_url_text)
 		_partition_layout.add_widget(self.topic_url)
   
@@ -193,27 +193,42 @@ class MainScreen(GridLayout):
  	
 	def xmit_payload(self, payload):
 		if (self._data_object.get("protocol") == "mqtt"):
-			mqttc = mqtt.Client()
-			mqttc.connect(self._data_object.get("server"), port=self._data_object.get("port"), keepalive=5)
-			ret_status = mqttc.publish(self._data_object.get("topic_url"), payload)
-			mqttc.disconnect()
-			return ret_status
+			try:
+				mqttc = mqtt.Client()
+				mqttc.connect(self._data_object.get("server"), port=int(self._data_object.get("port")), keepalive=5)
+				_ret = mqttc.publish(self._data_object.get("topic_url"), payload)
+				ret_status = _ret.rc
+				mqttc.disconnect()
+			except Exception as _exp:
+				ret_status = _exp
+			return str(ret_status)
 		elif (self._data_object.get("protocol") == "http"):
 			http_payload = { 'payload': payload }
-			ret_status = requests.post("http://" + self._data_object.get("server") + \
-       								   ":" + self._data_object.get("port") + self._data_object.get("topic_url"), data=http_payload) 
-			return ret_status
+			try:
+				ret_status = requests.post("http://" + self._data_object.get("server") + \
+   										   ":" + self._data_object.get("port") + self._data_object.get("topic_url"), data=http_payload) 
+			except Exception as _exp:
+				ret_status = _exp
+			return str(ret_status)
 		elif (self._data_object.get("protocol") == "https"):
 			https_payload = { 'payload': payload }
-			ret_status = requests.post("https://" + self._data_object.get("server") + \
-       								   ":" + self._data_object.get("port") + self._data_object.get("topic_url"), data=https_payload) 
-			return ret_status
+			try:
+				ret_status = requests.post("https://" + self._data_object.get("server") + \
+   										   ":" + self._data_object.get("port") + self._data_object.get("topic_url"), data=https_payload) 
+			except Exception as _exp:
+				ret_status = _exp
+			return str(ret_status)
 		elif (self._data_object.get("protocol") == "udp"):
-			sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-			sock.sendto(payload, (self._data_object.get("server"), self._data_object.get("port")))
-			return ret_status
+			try:
+				sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+				byte_payload = bytes(payload, "utf-8")
+				sock.sendto(byte_payload, (self._data_object.get("server"), int(self._data_object.get("port"))))
+				ret_status = "sent"
+			except Exception as _exp:
+				ret_status = _exp
+			return str(ret_status)
 		else:
-			return False
+			return str(False)
 
    
 	def publish_terminal(self, terminal, _data_queue):

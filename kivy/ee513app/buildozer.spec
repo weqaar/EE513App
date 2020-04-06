@@ -1,10 +1,10 @@
 [app]
-title = ee513app
-package.name = axlapp
+title = sxmitter
+package.name = sxmitter
 package.domain = ie.dcu.ee513
 source.dir = .
 source.include_exts = py,png,jpg,kv,atlas
-version = 0.4
+version = 1.0
 requirements = python3,kivy,plyer,requests,paho-mqtt,pyjnius,jnius
 icon.filename = %(source.dir)s/icons/dcu-logo-icon.png
 #Android
