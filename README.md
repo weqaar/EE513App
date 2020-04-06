@@ -1,2 +1,6 @@
 # EE513App
-Mobile App for Accelerometer mqtt sender
+Author: Weqaar Janjua, EE513, DCU.ie
+
+Sensor Data Transmitter - sxmitter
+
+use the kivy/ app
