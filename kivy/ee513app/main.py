@@ -55,12 +55,20 @@ class MainScreen(GridLayout):
 		self.gps_status = None
 		self.default_sensor = "Accelerometer"
 		self.default_protocol = "terminal"
+		self.default_server = "test.mosquitto.org"
+		self.default_port = "1883"
+		self.default_topic_url = "ie/dcu/ee513"
 
 		#Layouts
 		self._main_layout = BoxLayout(orientation='vertical', padding=0, size_hint=(1, 1))
-		_terminal_layout = BoxLayout(orientation='vertical', padding=0, size_hint=(1, 0.7))
-		_partition_layout = GridLayout(cols=2, rows=6, padding=0, size_hint=(1, 1), row_force_default=True, \
-									   rows_minimum={0: 150, 1: 150, 2: 150, 3: 150}, row_default_height=150, spacing=25)
+		if (platform == 'android') or (platform == 'ios'):
+			_terminal_layout = BoxLayout(orientation='vertical', padding=0, size_hint=(1, 0.7))
+			_partition_layout = GridLayout(cols=2, rows=6, padding=0, size_hint=(1, 1), row_force_default=True, \
+										rows_minimum={0: 150, 1: 150, 2: 150, 3: 150}, row_default_height=150, spacing=25)
+		else:
+			_terminal_layout = BoxLayout(orientation='vertical', padding=0, size_hint=(1, 0.4))
+			_partition_layout = GridLayout(cols=2, rows=6, padding=0, size_hint=(1, 1), row_force_default=True, \
+										rows_minimum={0: 50, 1: 50, 2: 50, 3: 50}, row_default_height=50, spacing=25)
   
 		_action_previous = ActionPrevious(title='EE513 LABS', with_previous=False, app_icon='icons/chip.png', padding=0)
 		_action_overflow = ActionOverflow()
@@ -69,18 +77,23 @@ class MainScreen(GridLayout):
 		_action_overflow.add_widget(_action_button)
 		_action_button_about = ActionButton(text='About')
 		_action_button_about.bind(on_release=self._popup_about)
+		_action_button_quit = ActionButton(text='Quit')
+		_action_button_quit.bind(on_release=self.quitApp)
 		_action_view.add_widget(_action_previous)
 		_action_view.add_widget(_action_button_about)
+		_action_view.add_widget(_action_button_quit)
 		_action_view.add_widget(_action_overflow)
 		_action_bar = ActionBar(pos_hint={'top': 1})
 		_action_bar.add_widget(_action_view)
 
 		_partition_layout.add_widget(Label(text='Server', size_hint_x=None, width=400))
-		self.server = TextInput(text='192.168.0.20', multiline=False, cursor_blink=True)
+		self._data_object["server"] = self.default_server
+		self.server = TextInput(text='test.mosquitto.org', multiline=False, cursor_blink=True)
 		self.server.bind(text=self.callback_server_text)
 		_partition_layout.add_widget(self.server)
 	
 		_partition_layout.add_widget(Label(text='Port', size_hint_x=None, width=400))
+		self._data_object["port"] = self.default_port
 		self.port = TextInput(text='1883', multiline=False)
 		self.port.bind(text=self.callback_port_text)
 		_partition_layout.add_widget(self.port)
@@ -104,6 +117,7 @@ class MainScreen(GridLayout):
 		_partition_layout.add_widget(protocol_spinner)
 
 		_partition_layout.add_widget(Label(text='Topic/URL', size_hint_x=None, width=400))
+		self._data_object["topic_url"] = self.default_topic_url
 		self.topic_url = TextInput(text='ie/dcu/ee513', multiline=False)
 		self.topic_url.bind(text=self.callback_topic_url_text)
 		_partition_layout.add_widget(self.topic_url)
@@ -151,6 +165,8 @@ class MainScreen(GridLayout):
 		close_button.bind(on_press=__popup.dismiss)
 		__popup.open()
 
+	def quitApp(self, event):
+		App.get_running_app().stop()
 
 	def _popup_debug(self, event):
 		popup_box = BoxLayout(orientation = 'vertical', padding = 0)
@@ -206,7 +222,8 @@ class MainScreen(GridLayout):
 			http_payload = { 'payload': payload }
 			try:
 				ret_status = requests.post("http://" + self._data_object.get("server") + \
-   										   ":" + self._data_object.get("port") + self._data_object.get("topic_url"), data=http_payload) 
+   										   ":" + self._data_object.get("port") + "/" + \
+                    					   self._data_object.get("topic_url").strip("/"), data=http_payload) 
 			except Exception as _exp:
 				ret_status = _exp
 			return str(ret_status)
@@ -214,7 +231,8 @@ class MainScreen(GridLayout):
 			https_payload = { 'payload': payload }
 			try:
 				ret_status = requests.post("https://" + self._data_object.get("server") + \
-   										   ":" + self._data_object.get("port") + self._data_object.get("topic_url"), data=https_payload) 
+   										   ":" + self._data_object.get("port") + "/" + \
+                    					   self._data_object.get("topic_url").strip("/"), data=https_payload) 
 			except Exception as _exp:
 				ret_status = _exp
 			return str(ret_status)
@@ -511,15 +529,20 @@ class MainScreen(GridLayout):
 			else:
 				pass
 		else:
-			payload = "time: " + str(time.strftime("%c", time.gmtime()))
-			terminal.insert_text(payload + "\n")
-			if (self._data_object.get("protocol") != "terminal"):
-				try:
-					terminal.insert_text("xmit status: " + self.xmit_payload(payload) + "\n")
-				except Exception as _exp:
-					terminal.insert_text("Exception: " + str(_exp) + "\n")
-					return
-			time.sleep(2)
+			while True:
+				if _data_queue.empty() is False:
+					qdata = _data_queue.get()
+					if qdata == "exit":
+						break
+				payload = "time: " + str(time.strftime("%c", time.gmtime()))
+				terminal.insert_text(payload + "\n")
+				if (self._data_object.get("protocol") != "terminal"):
+					try:
+						terminal.insert_text("xmit status: " + self.xmit_payload(payload) + "\n")
+					except Exception as _exp:
+						terminal.insert_text("Exception: " + str(_exp) + "\n")
+						return
+				time.sleep(2)
 
 #Bug fix, src: https://github.com/jeremyklelifa/Jukebar/commit/0607c7cb4dcef2125ab1b2b70227a7999f7caabe
 #Another potential solution: https://github.com/VoiceThread/pyjnius
