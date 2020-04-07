@@ -13,6 +13,10 @@ author = Weqaar Janjua
 fullscreen = 0
 android.permissions = VIBRATE,INTERNET,ACTIVITY_RECOGNITION,ACCESS_FINE_LOCATION,ACCESS_COARSE_LOCATION
 android.arch = armeabi-v7a
+#android.arch = arm64-v8a
+android.api = 28
+#android.minapi = 21
+
 #IOS
 ios.kivy_ios_url = https://github.com/kivy/kivy-ios
 ios.kivy_ios_branch = master
