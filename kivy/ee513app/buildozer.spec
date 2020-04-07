@@ -6,7 +6,7 @@ source.dir = .
 source.include_exts = py,png,jpg,kv,atlas
 version = 1.1
 requirements = python3,kivy,plyer,requests,paho-mqtt,pyjnius,jnius
-icon.filename = %(source.dir)s/icons/dcu-logo-icon.png
+icon.filename = %(source.dir)s/icons/sxmitter-logo.png
 #Android
 orientation = all
 author = Weqaar Janjua
