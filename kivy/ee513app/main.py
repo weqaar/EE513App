@@ -70,7 +70,7 @@ class MainScreen(GridLayout):
 			_partition_layout = GridLayout(cols=2, rows=6, padding=0, size_hint=(1, 1), row_force_default=True, \
 										rows_minimum={0: 50, 1: 50, 2: 50, 3: 50}, row_default_height=50, spacing=25)
   
-		_action_previous = ActionPrevious(title='EE513 LABS', with_previous=False, app_icon='icons/sxmitter-logo.png', padding=0)
+		_action_previous = ActionPrevious(title='EE513 LABS', with_previous=False, app_icon='icons/sxmitter-logo-app-small.png', padding=0)
 		_action_overflow = ActionOverflow()
 		_action_view = ActionView(overflow_group=_action_overflow, use_separator=True)
 		_action_button = ActionButton(text='debug')
